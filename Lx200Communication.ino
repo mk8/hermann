@@ -30,7 +30,7 @@ void Lx200Communication::SendResponse (String message) {
     lx200_debugBuffer[lx200_debugCircularStop++] = message[i];
     lx200_debugCircularStop = lx200_debugCircularStop % DEBUG_BUFFER_SIZE;    
   }  
-#endif  
+#endif
   ProcessPendingMessages ();
 }
 
@@ -51,8 +51,14 @@ void Lx200Communication::ProcessPendingMessages () {
 
 #else 
 
-    write (sendingBuffer.charAt (0));
-    sendingBuffer = sendingBuffer.substring (1);
+    if (micros() > whenSendNextByte) {
+      write (sendingBuffer.charAt (0));
+      sendingBuffer = sendingBuffer.substring (1);
+      whenSendNextByte = micros() + DELAY_FOR_NEXT_CHAR;
+      if (whenSendNextByte < micros()) {
+        whenSendNextByte = DELAY_FOR_NEXT_CHAR;
+      }
+    }
 
 #endif
 

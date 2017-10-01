@@ -10,6 +10,9 @@
 
 #define SUPPORT_FOR_MULTIPLE_SERIALS
  
+#define DELAY_FOR_NEXT_CHAR 1000L
+
+
 #ifdef DEBUG_COMMUNICATIONS
 
 static char lx200_debugBuffer[DEBUG_BUFFER_SIZE];
@@ -34,6 +37,7 @@ class Lx200Communication {
   private:
     String sendingBuffer = "";
     COMMUNICATION_PORT communicationPort;
+    unsigned long whenSendNextByte = 0L;
 
     void begin(long bauds);
     bool available ();
