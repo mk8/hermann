@@ -1,20 +1,21 @@
 #include "Lx200Communication.h"
 
-Lx200Communication::Lx200Communication () {
-  Serial.begin (9600);
+Lx200Communication::Lx200Communication (Lx200Communication::COMMUNICATION_PORT communicationPort) {
+  this->communicationPort = communicationPort;
+  begin(9600);
 }
 
 bool Lx200Communication::DataAvailable () {
-  return Serial.available ();
+  return available();
 }
 
 char Lx200Communication::GetData () {
   char data;
-  if (Serial.available ()) {
-    data = (char)Serial.read ();
+  if (available()) {
+    data = read();
 #ifdef DEBUG_COMMUNICATIONS
-    debugBuffer[debugCircularStop++] = data;
-    debugCircularStop = debugCircularStop % DEBUG_BUFFER_SIZE;
+    lx200_debugBuffer[lx200_debugCircularStop++] = data;
+    lx200_debugCircularStop = lx200_debugCircularStop % DEBUG_BUFFER_SIZE;
 #endif
     return data;
   } else {
@@ -26,8 +27,8 @@ void Lx200Communication::SendResponse (String message) {
   sendingBuffer += message;
 #ifdef DEBUG_COMMUNICATIONS
   for (int i = 0; i < message.length (); ++i) {
-    debugBuffer[debugCircularStop++] = message[i];
-    debugCircularStop = debugCircularStop % DEBUG_BUFFER_SIZE;    
+    lx200_debugBuffer[lx200_debugCircularStop++] = message[i];
+    lx200_debugCircularStop = lx200_debugCircularStop % DEBUG_BUFFER_SIZE;    
   }  
 #endif  
   ProcessPendingMessages ();
@@ -39,18 +40,18 @@ void Lx200Communication::ProcessPendingMessages () {
 #ifdef CHECK_SERIAL_BUFFER_SIZE
 
     // In this case empty space in serial write buffer is checked. Available only on Arduino MEGA
-    int elementWritable = Serial.availableForWrite ();  
+    int elementWritable = availableForWrite ();  
     if (sendingBuffer.length () < elementWritable) {
-      Serial.write (sendingBuffer.c_str ());
+      write (sendingBuffer.c_str ());
       sendingBuffer = "";
     } else {
-      Serial.write (sendingBuffer.substring (0, elementWritable).c_str ());
+      write (sendingBuffer.substring (0, elementWritable).c_str ());
       sendingBuffer = sendingBuffer.substring (elementWritable + 1);
     }
 
 #else 
 
-    Serial.write (sendingBuffer.charAt (0));
+    write (sendingBuffer.charAt (0));
     sendingBuffer = sendingBuffer.substring (1);
 
 #endif
@@ -61,11 +62,127 @@ void Lx200Communication::ProcessPendingMessages () {
 void Lx200Communication::SendDebugBufferBack () {
   String message;
 #ifdef DEBUG_COMMUNICATIONS
-  for (int i=debugCircularStart; i != debugCircularStop; i = (i+1)%DEBUG_BUFFER_SIZE) {
-    message += debugBuffer[i];
+  for (int i=lx200_debugCircularStart; i != lx200_debugCircularStop; i = (i+1)%DEBUG_BUFFER_SIZE) {
+    message += lx200_debugBuffer[i];
   }
   SendResponse(">>" + message+"\n");
-  debugCircularStart = debugCircularStop;
+  lx200_debugCircularStart = lx200_debugCircularStop;
 #endif
+}
+
+void Lx200Communication::begin(long bauds) {
+  switch (communicationPort) {
+    case SERIAL0:
+      Serial.begin(bauds);
+      break;
+
+#ifdef SUPPORT_FOR_MULTIPLE_SERIALS      
+    case SERIAL1:
+      Serial1.begin(bauds);
+      break;
+    case SERIAL2:
+      Serial2.begin(bauds);
+      break;
+    case SERIAL3:
+      Serial3.begin(bauds);
+      break;
+#endif
+  }
+}
+
+bool Lx200Communication::available() {
+  switch (communicationPort) {
+    case SERIAL0:
+      return Serial.available();
+      break;
+
+#ifdef SUPPORT_FOR_MULTIPLE_SERIALS
+    case SERIAL1:
+      return Serial1.available();
+      break;
+    case SERIAL2:
+      return Serial2.available();
+      break;
+    case SERIAL3:
+      return Serial3.available();
+      break;
+#endif
+  }
+}
+
+char Lx200Communication::read() {
+  switch (communicationPort) {
+    case SERIAL0:
+      return (char)Serial.read();
+      break;
+      
+#ifdef SUPPORT_FOR_MULTIPLE_SERIALS
+    case SERIAL1:
+      return (char)Serial1.read();
+      break;
+    case SERIAL2:
+      return (char)Serial2.read();
+      break;
+    case SERIAL3:
+      return (char)Serial3.read();
+      break;
+#endif
+  }
+}
+
+int Lx200Communication::availableForWrite() {
+  switch (communicationPort) {
+    case SERIAL0:
+      return Serial.availableForWrite();
+      break;
+
+#ifdef SUPPORT_FOR_MULTIPLE_SERIALS
+    case SERIAL1:
+      return Serial1.availableForWrite();
+      break;
+    case SERIAL2:
+      return Serial2.availableForWrite();
+      break;
+    case SERIAL3:
+      return Serial3.availableForWrite();
+      break;
+#endif      
+  }
+}
+
+void Lx200Communication::write(char data) {
+  switch (communicationPort) {
+    case SERIAL0:
+      Serial.write(data);
+      break;
+      
+#ifdef SUPPORT_FOR_MULTIPLE_SERIALS
+    case SERIAL1:
+      Serial1.write(data);
+      break;
+    case SERIAL2:
+      Serial2.write(data);
+      break;
+    case SERIAL3:
+      Serial3.write(data);
+      break;
+#endif
+  }
+}
+
+bool Lx200Communication::IsDeviceSupported(COMMUNICATION_PORT port) {
+  switch (port) {
+    case SERIAL0:
+      return true;
+#ifdef SUPPORT_FOR_MULTIPLE_SERIALS
+    case SERIAL1:
+    case SERIAL2:
+    case SERIAL3:
+      return true;
+      break;
+#endif
+    default:
+      return false;
+  }
 }
 
