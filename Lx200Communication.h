@@ -32,12 +32,14 @@ class Lx200Communication {
     void ProcessPendingMessages ();
 
     void SendDebugBufferBack ();
+    void SetMonitorMode (boolean mode);
     static bool IsDeviceSupported(COMMUNICATION_PORT);
-
+    
   private:
     String sendingBuffer = "";
     COMMUNICATION_PORT communicationPort;
     unsigned long whenSendNextByte = 0L;
+    boolean monitorMode = false;
 
     void begin(long bauds);
     bool available ();

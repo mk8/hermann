@@ -3,6 +3,9 @@
 
 Lx200Protocol* lx200Protocol = NULL;
 Lx200Protocol* lx200Protocol2 = NULL;
+
+Lx200Communication* lx200Communication2 = NULL;
+
 Telescope* telescope;
 
 const int ledPin =  LED_BUILTIN;// the number of the LED pin
@@ -21,8 +24,10 @@ void setup() {
   lx200Protocol = new Lx200Protocol(lx200Communication, telescope);
 
   if (Lx200Communication::IsDeviceSupported(Lx200Communication::SERIAL1)) {
-    Lx200Communication* lx200Communication2 = new Lx200Communication(Lx200Communication::SERIAL1);
-    lx200Protocol2 = new Lx200Protocol(lx200Communication2, telescope);    
+    lx200Communication2 = new Lx200Communication(Lx200Communication::SERIAL1);
+    lx200Communication2->SetMonitorMode(true);
+    
+    //lx200Protocol2 = new Lx200Protocol(lx200Communication2, telescope);    
   }
 
 }
@@ -31,9 +36,12 @@ void loop() {
 
   // Handle protocol message
   lx200Protocol->HandleCommunication ();
-  if (lx200Protocol != NULL) {
-    lx200Protocol2->HandleCommunication ();    
+  if (lx200Communication2 != NULL) {
+    lx200Communication2->ProcessPendingMessages();
   }
+  //if (lx200Protocol != NULL) {
+  //  lx200Protocol2->HandleCommunication ();    
+  //}
 
   unsigned long currentMillis = millis();
 

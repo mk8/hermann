@@ -36,6 +36,11 @@ void Lx200Communication::SendResponse (String message) {
 
 void Lx200Communication::ProcessPendingMessages () {
 
+  if (monitorMode && lx200_debugCircularStart != lx200_debugCircularStop) {
+    sendingBuffer += lx200_debugBuffer[lx200_debugCircularStart++];
+    lx200_debugCircularStart = lx200_debugCircularStart % DEBUG_BUFFER_SIZE;
+  }
+  
   if (sendingBuffer.length () > 0) {
 #ifdef CHECK_SERIAL_BUFFER_SIZE
 
@@ -74,6 +79,11 @@ void Lx200Communication::SendDebugBufferBack () {
   SendResponse(">>" + message+"\n");
   lx200_debugCircularStart = lx200_debugCircularStop;
 #endif
+}
+
+
+void Lx200Communication::SetMonitorMode (boolean mode) {
+  this->monitorMode = mode;
 }
 
 void Lx200Communication::begin(long bauds) {
