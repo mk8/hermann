@@ -29,6 +29,7 @@ class Lx200Communication {
     bool DataAvailable ();
     char GetData ();
     void SendResponse (String message);
+    void SendResponse (int value);
     void ProcessPendingMessages ();
 
     void SendDebugBufferBack ();

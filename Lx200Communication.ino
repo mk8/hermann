@@ -23,6 +23,13 @@ char Lx200Communication::GetData () {
   }
 }
 
+void Lx200Communication::SendResponse (int value) {
+  String message(value);
+  message += "#";
+
+  SendResponse(message);
+}
+
 void Lx200Communication::SendResponse (String message) {
   sendingBuffer += message;
 #ifdef DEBUG_COMMUNICATIONS

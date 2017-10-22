@@ -10,8 +10,16 @@ void Lx200Protocol::HandleCommunication() {
 
   if (communicationHandler->DataAvailable ()) {
     temporaryBuffer += communicationHandler->GetData ();
+    //communicationHandler->SendResponse(temporaryBuffer);
+    //communicationHandler->SendResponse("\r\n");
     if (ParseCommand (temporaryBuffer)) {
+      //communicationHandler->SendResponse("COMMAND PARSED");
       temporaryBuffer = "";
+    } else {
+      // If buffer contains terminating character, buffer is cleaned
+      if (temporaryBuffer.indexOf('#') >= 0) {
+        temporaryBuffer = "";
+      }
     }
   }
 }
@@ -55,7 +63,8 @@ bool Lx200Protocol::ParseCommand (String command) {
 }
 
 int Lx200Protocol::IdentifyStartCommand (String command) {
-  return command.lastIndexOf (':');
+  
+  return command.indexOf (':');
 }
 
 int Lx200Protocol::ParseUserCommand (String command) {
@@ -73,12 +82,56 @@ int Lx200Protocol::ParseUserCommand (String command) {
 
 int Lx200Protocol::ParseSetInformationCommand (String command) {
 
+  int response = 0;
+  int pos1, pos2;
+  
   // Check for end command character
   if (command.indexOf('#') >= 0) {
 
     // TOQU: Here verius command have to be implemented
-    
-    communicationHandler->SendResponse ("1");
+    switch (command.charAt(0)) {
+      case 'r':
+        pos1 = command.indexOf(':');
+        if (pos1 > 0) {
+          String cmd2 = command.substring(pos1+1);
+          pos2 = cmd2.indexOf(':');
+          if (pos2 > 0) {
+            telescope->SetPositionRAHH(atoi(command.substring(1, pos1).c_str()));
+            telescope->SetPositionRAMM(atoi(cmd2.substring(0, pos2).c_str()));
+            telescope->SetPositionRASS(atoi(cmd2.substring(pos2 + 1, pos2+3).c_str()));
+            response = 1;
+          } else {
+            pos2 = cmd2.indexOf(".");
+            if (pos2 > 0) {
+              telescope->SetPositionRAHH(atoi(command.substring(1, pos1).c_str()));
+              telescope->SetPositionRAMM(atoi(command.substring(0, pos2).c_str()));
+              telescope->SetPositionRASS(atoi(command.substring(pos2 + 1, pos2+2).c_str()));
+              response = 1;
+            }
+          }
+        }
+        break;
+      case 'd':
+        pos1 = command.indexOf('*');
+        if (pos1 > 0) {
+          String cmd2 = command.substring(pos1+1);
+          pos2 = cmd2.indexOf(':');
+          if (pos2 > 0) {
+            telescope->SetPositionDEHH(atoi(command.substring(1, pos1).c_str()));
+            telescope->SetPositionDEMM(atoi(cmd2.substring(0, pos2).c_str()));
+            telescope->SetPositionDESS(atoi(cmd2.substring(pos2 + 1, pos2+3).c_str()));
+            response = 1;
+          } else {
+            telescope->SetPositionRAHH(atoi(command.substring(1, pos1).c_str()));
+            telescope->SetPositionRAMM(atoi(command.substring(0, pos2).c_str()));
+            telescope->SetPositionRASS(0);
+          }
+        }
+        break;
+      default:
+        break;
+    }
+    communicationHandler->SendResponse (response);
     return true;
   }
   return false;
@@ -129,23 +182,27 @@ int Lx200Protocol::ParseQuitCommand (String command) {
 
 int Lx200Protocol::ParseGetInformationCommand (String command) {
   bool ret = false;
+  char buffer[32];
+  
   if (command.length () < 2) return false;
   if (command.charAt (1) != '#') return false;
 
   switch (command.charAt (0)) {
     case 'R': // Get current/target object RA
       if (telescope->GetPrecisionMode () == Telescope::LOW_RES) {
-        communicationHandler->SendResponse ("00:00.0#");
+        sprintf(buffer,"%02d:%02d.%01d#\0", telescope->GetPositionRAHH(), telescope->GetPositionRAMM(), telescope->GetPositionRASS() / 6);
       } else {
-        communicationHandler->SendResponse ("00:00:00#");        
+        sprintf(buffer,"%02d:%02d:%02d#\0", telescope->GetPositionRAHH(), telescope->GetPositionRAMM(), telescope->GetPositionRASS());        
       }
+      communicationHandler->SendResponse(String(buffer));
       break;
     case 'D': // Get Telescope Declination.
       if (telescope->GetPrecisionMode () == Telescope::LOW_RES) {
-        communicationHandler->SendResponse ("+00*00#");
+        sprintf(buffer,"%+03d*%02d#", telescope->GetPositionDEHH(), telescope->GetPositionDEMM());
       } else {
-        communicationHandler->SendResponse ("+00*00'00#");
+        sprintf(buffer,"%+03d*%02d'%02d#", telescope->GetPositionDEHH(), telescope->GetPositionDEMM(), telescope->GetPositionDESS());
       }
+      communicationHandler->SendResponse(String(buffer));
       break;
     
     default:
